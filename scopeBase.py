@@ -3,8 +3,8 @@ import pyvisa
 class dataScaler():
     def __init__(self, data, factor, offset):
         self.data = data
-        self.factor = factor
-        self.offset = offset
+        self.factor = float(factor)
+        self.offset = float(offset)
 
     def __len__(self):
         return len(self.data)
@@ -15,6 +15,19 @@ class dataScaler():
     def __iter__(self):
         for item in self.data:
             yield item * self.factor + self.offset
+
+class timeScale():
+    def __init__(self, len, step, offset = 0):
+        self.length = int(len)
+        self.step = float(step)
+        self.offset = float(offset)
+    def __len__(self):
+        return self.length
+    def __getitem__(self, index):
+        return index * self.step + self.offset
+    def __iter__(self):
+        for i in range(0,self.length):
+            yield i * self.step + self.offset
 
 class oscilloscope():
     def __init__(self,ipStr):

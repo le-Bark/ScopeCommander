@@ -46,6 +46,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout_4.setSpacing(0)
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
         self.screenCaptureLabel = QtWidgets.QLabel(self.ScreenTab)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.screenCaptureLabel.sizePolicy().hasHeightForWidth())
+        self.screenCaptureLabel.setSizePolicy(sizePolicy)
         self.screenCaptureLabel.setObjectName("screenCaptureLabel")
         self.horizontalLayout_4.addWidget(self.screenCaptureLabel)
         self.topTabWidget.addTab(self.ScreenTab, "")
@@ -160,7 +165,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.topTabWidget.setCurrentIndex(0)
+        self.topTabWidget.setCurrentIndex(1)
         self.bottomTabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 

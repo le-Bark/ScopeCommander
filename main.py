@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QMessageBox
 import sys
 import mainWindow
 import scopeBase
@@ -62,16 +63,16 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.scope = None
     
     def linkScope(self):
-        self.singleTrigButton.clicked.connect(self.scope.single)
-        self.startButton.clicked.connect(self.scope.start)
-        self.stopButton.clicked.connect(self.scope.stop)
+        self.singleTrigButton.clicked.connect(self.onSingle)
+        self.startButton.clicked.connect(self.onStart)
+        self.stopButton.clicked.connect(self.onStop)
         self.copyDataButton.setEnabled(True)
         self.screenCaptureButton.setEnabled(True)
 
     def unlinkScope(self):
-        self.singleTrigButton.clicked.disconnect(self.scope.single)
-        self.startButton.clicked.disconnect(self.scope.start)
-        self.stopButton.clicked.disconnect(self.scope.stop)
+        self.singleTrigButton.clicked.disconnect(self.onSingle)
+        self.startButton.clicked.disconnect(self.onStart)
+        self.stopButton.clicked.disconnect(self.onStop)
         self.copyDataButton.setEnabled(False)
         self.scope.close()
         self.scope = None
@@ -79,7 +80,14 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
 
 
     def onCopy(self):
-        self.scope.getChannelsBuffer()
+        try:
+            self.scope.getChannelsBuffer()
+        except ValueError as err:
+            QMessageBox.critical(None, "Error", "-".join(err.args))
+            return
+        except:
+            self.unlinkScope()
+            return
         self.GraphWidget.canvas.ax.cla()
         for ch in self.scope.activeChannels:
             self.ax.plot(self.scope.data["time"],self.scope.data[ch])
@@ -90,10 +98,23 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.GraphWidget.canvas.draw()
 
     def onScreenCapture(self):
-        self.scope.takeScreenshot()
+        try:
+            self.scope.takeScreenshot()
+        except ValueError as err:
+            QMessageBox.critical(None, "Error", "-".join(err.args))
+            return
+        except:
+            self.unlinkScope()
+            return
+        
         self.pixmap = QPixmap()
-        self.pixmap.loadFromData(self.scope.screenshotBuffer)
-        self.screenCaptureLabel.setPixmap(self.pixmap)
+        self.pixmap.loadFromData(self.scope.screenshotBuffer)        
+        scaledPixmap = self.pixmap.scaled(
+            self.screenCaptureLabel.size(), 
+            Qt.AspectRatioMode.KeepAspectRatio, 
+            Qt.TransformationMode.SmoothTransformation
+            )
+        self.screenCaptureLabel.setPixmap(scaledPixmap)
     def onSavetoClipboard(self):
         #pixmap = self.GraphWidget.canvas.grab()
         if self.pixmap != None:
@@ -135,7 +156,22 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
                 sheet.Cells(2+len(self.scope.scaledData[ch]) - 1, i+1))
             range.Value = [[i] for i in self.scope.scaledData[ch]]
         
-
+    def onStop(self):
+        try:
+            self.scope.stop()
+        except:
+            self.unlinkScope()
+    def onStart(self):
+        try:
+            self.scope.start()
+        except:
+            self.unlinkScope()
+    def onSingle(self):
+        try:
+            self.scope.single()
+        except:
+            self.unlinkScope()
+        
 
 
 window = scopeCommander()
