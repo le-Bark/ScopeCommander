@@ -1,4 +1,5 @@
 from scopeBase import oscilloscope
+from scopeBase import dataScaler
 
 class rigol_1054z(oscilloscope):
     def __init__(self,ipStr):
@@ -24,6 +25,7 @@ class rigol_1054z(oscilloscope):
     def getChannelsBuffer(self):
         self.stop()
         self.data = {}
+        self.scaledData = {}
         self.getActiveChannels()
         self.inst.write(":WAV:MODE NORM")
         self.inst.write(":WAV:FORM BYTE")
@@ -37,10 +39,16 @@ class rigol_1054z(oscilloscope):
         self.inst.write(":WAV:STOP {}".format(points))
 
         for ch in self.activeChannels:
+            incr = float(self.inst.query(":WAV:YINC?"))
+            yorigin = float(self.inst.query(":WAVeform:YOR?"))
+            yref = float(self.inst.query(":WAVeform:YREF?"))
+
             self.inst.write(":WAV:SOUR {}".format(ch))
             self.data[ch] = self.inst.query_binary_values(":WAV:DATA?", datatype='B')
+            self.scaledData[ch] = dataScaler(self.data[ch],incr,(0-yorigin-yref)*incr)
 
         self.data["time"] = [i*xstep for i in range(0,stop)]
+        self.scaledData["time"] = self.data["time"]
 
     def single(self):
         self.inst.write(":SING")

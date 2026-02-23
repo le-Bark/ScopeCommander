@@ -132,8 +132,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         for i,ch in enumerate(["time"] + self.scope.activeChannels):
             range = sheet.Range(
                 sheet.Cells(2, i+1),
-                sheet.Cells(2+len(self.scope.data[ch]) - 1, i+1))
-            range.Value = [[i] for i in self.scope.data[ch]]
+                sheet.Cells(2+len(self.scope.scaledData[ch]) - 1, i+1))
+            range.Value = [[i] for i in self.scope.scaledData[ch]]
         
 
 

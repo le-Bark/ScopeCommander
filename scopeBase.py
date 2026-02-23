@@ -1,5 +1,21 @@
 import pyvisa
 
+class dataScaler():
+    def __init__(self, data, factor, offset):
+        self.data = data
+        self.factor = factor
+        self.offset = offset
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index] * self.factor + self.offset
+
+    def __iter__(self):
+        for item in self.data:
+            yield item * self.factor + self.offset
+
 class oscilloscope():
     def __init__(self,ipStr):
         self.rm = pyvisa.ResourceManager()
@@ -8,6 +24,7 @@ class oscilloscope():
         self.inst = None
         self.memDepth = 0
         self.data = {}
+        self.scaledData = {}
         self.activeChannels = []
         self.channels = []
         self.yScaleMin = 0
