@@ -6,16 +6,20 @@ class tek_MDO3X(oscilloscope):
     def __init__(self,ipStr):
         oscilloscope.__init__(self,ipStr)
         self.connect()
+        self.inst.write_termination = "\r\n"
+        self.inst.read_termination = "\n"
+        self.inst.timeout = 3000
         self.inst.chunk_size = 102400
-        self.channels = ["CH1","CH2","CH3","CH4"]
+        self.channels = ["CH1","CH2","CH3","CH4","MATH"]
         self.yScaleMin = -128
         self.yScaleMax = 128
 
     def getActiveChannels(self):
         self.activeChannels = []
         for ch in self.channels:
-            active = int(self.inst.query(":SEL:{}?".format(ch)))
-            if active == 1:
+            self.inst.write("DAT:SOU {}".format(ch))
+            header = self.inst.query("WFMOutpre?").strip().split(";")
+            if(len(header) > 5):
                 self.activeChannels.append(ch)
         return self.activeChannels
 
@@ -37,10 +41,10 @@ class tek_MDO3X(oscilloscope):
 
             self.data[ch] = self.inst.query_binary_values('CURV?', datatype='b')
 
-            yMult = float(self.inst.query(":WFMOutpre:YMUlt?"))
-            chPos = self.inst.query(":" + ch + ":pos?")
-            chScale = self.inst.query(":" + ch + ":scal?")
-            self.scaledData[ch] = dataScaler(self.data[ch],yMult,-float(chPos)*float(chScale))
+            header = self.inst.query("WFMOutpre?").strip().split(";")
+            scale = float(header[14])
+            offset = float(header[15])
+            self.scaledData[ch] = dataScaler(self.data[ch],scale,-offset*scale)
 
         xZero = float(self.inst.query(":WFMOutpre:XZEro?"))
         xIncr = float(self.inst.query(":WFMOutpre:XINcr?"))

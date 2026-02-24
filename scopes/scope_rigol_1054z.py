@@ -39,11 +39,10 @@ class rigol_1054z(oscilloscope):
         self.inst.write(":WAV:STOP {}".format(points))
 
         for ch in self.activeChannels:
+            self.inst.write(":WAV:SOUR {}".format(ch))            
             incr = float(self.inst.query(":WAV:YINC?"))
             yorigin = float(self.inst.query(":WAVeform:YOR?"))
             yref = float(self.inst.query(":WAVeform:YREF?"))
-
-            self.inst.write(":WAV:SOUR {}".format(ch))
             self.data[ch] = self.inst.query_binary_values(":WAV:DATA?", datatype='B')
             self.scaledData[ch] = dataScaler(self.data[ch],incr,(0-yorigin-yref)*incr)
 

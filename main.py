@@ -50,9 +50,13 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.unlinkScope()
 
         self.scope = scopeBase.oscilloscope(ipStr)
-        
+        self.linkScope()
+
         if self.scope.connect():
-            self.idnDisplay.setText(self.scope.idn())
+            try:
+                self.idnDisplay.setText(self.scope.idn())
+            except:
+                return
             self.scope = scopeCompatibility.getCompatibleClass(self.scope)
             if self.scope == None:
                 self.idnDisplay.setText("Scope not compatible")
@@ -74,6 +78,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.startButton.clicked.disconnect(self.onStart)
         self.stopButton.clicked.disconnect(self.onStop)
         self.copyDataButton.setEnabled(False)
+        self.screenCaptureButton.setEnabled(False)
         self.scope.close()
         self.scope = None
         self.idnDisplay.setText("Disconnected")
