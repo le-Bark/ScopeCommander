@@ -1,6 +1,7 @@
 from scopeBase import oscilloscope
 from scopeBase import dataScaler
 from scopeBase import timeScale
+from scopeBase import copyWidth
 
 class tek_MDO3X(oscilloscope):
     def __init__(self,ipStr):
@@ -23,7 +24,7 @@ class tek_MDO3X(oscilloscope):
                 self.activeChannels.append(ch)
         return self.activeChannels
 
-    def getChannelsBuffer(self):
+    def getChannelsBuffer(self,width=copyWidth.screenData):
         self.stop()
         self.data = {}
         self.scaledData = {}

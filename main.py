@@ -129,7 +129,6 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         if self.excelCom == None:
             self.excelCom = excelCom.excelCOM()
         self.excelCom.refresh()
-        print(self.excelCom.workbookData)
         self.excelTreeView.setModel(self.excelCom.generateTreeView())
         self.excelTreeView.selectionModel().selectionChanged.connect(self.onExcelTreeSelectionChanged)
     

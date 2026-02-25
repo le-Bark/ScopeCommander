@@ -1,4 +1,9 @@
 import pyvisa
+from enum import Enum
+
+class copyWidth(Enum):
+    screenData = 1
+    fullBuffer = 2
 
 class dataScaler():
     def __init__(self, data, factor, offset):
@@ -43,6 +48,7 @@ class oscilloscope():
         self.yScaleMin = 0
         self.yScaleMin = 256
         self.screenshotBuffer  = []
+        self.copyWidth = copyWidth.screenData
         
 
     def connect(self):
@@ -55,7 +61,7 @@ class oscilloscope():
     def getActiveChannels(self):
         print("Not implemented")
 
-    def getChannelsBuffer(self):
+    def getChannelsBuffer(self,copyWidth=copyWidth.screenData):
         print("Not implemented")
 
     def close(self):
