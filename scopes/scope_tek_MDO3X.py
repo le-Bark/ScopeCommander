@@ -6,14 +6,21 @@ from scopeBase import copyWidth
 class tek_MDO3X(oscilloscope):
     def __init__(self,ipStr):
         oscilloscope.__init__(self,ipStr)
-        self.connect()
-        self.inst.write_termination = "\r\n"
-        self.inst.read_termination = "\n"
-        self.inst.timeout = 3000
-        self.inst.chunk_size = 102400
+
         self.channels = ["CH1","CH2","CH3","CH4","MATH"]
         self.yScaleMin = -128
         self.yScaleMax = 128
+        self.connect()
+        
+        #self.inst.write(":SOCKETS:ENA ON")
+        #self.inst.write(":SOCKETS:PORT 4000")
+        #self.inst.write(":SOCKETS:PROTOC NON")
+        #self.resourceStr = "TCPIP::{}::4000::SOCKET".format(ipStr)
+        #self.connect()
+        
+        self.inst.write_termination = "\r\n"
+        self.inst.read_termination = "\n"
+        self.inst.timeout = 3000
 
     def getActiveChannels(self):
         self.activeChannels = []
