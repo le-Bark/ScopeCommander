@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTableWidgetItem
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QHeaderView
 import sys
 import mainWindow
 import scopeBase
@@ -40,6 +40,23 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         #self.excelCom = excelCom.excelCOM()
         self.excelCom = None
 
+    def channelTableSetup(self):
+        tab = self.ChannelTable
+        tab.clearContents()
+        tab.setColumnCount(3)
+        tab.setRowCount(len(self.scope.channels))
+        tab.setHorizontalHeaderLabels(["Channel", "Lable", ""])
+        tab.verticalHeader().setVisible(False)
+        tab.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        tab.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        for row,(ch,lab) in enumerate(zip(self.scope.channels,self.scope.channels)): #to set label eventually
+            chItem = QTableWidgetItem(ch)
+            chItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            tab.setItem(row, 0, chItem)
+
+            lableItem = QTableWidgetItem("")
+            lableItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
+            tab.setItem(row, 1, lableItem)
 
     def onConnect(self):
         ipStr = self.ipInput.text().strip()
@@ -72,6 +89,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.stopButton.clicked.connect(self.onStop)
         self.copyDataButton.setEnabled(True)
         self.screenCaptureButton.setEnabled(True)
+        self.channelTableSetup()
 
     def unlinkScope(self):
         self.singleTrigButton.clicked.disconnect(self.onSingle)
@@ -82,6 +100,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.scope.close()
         self.scope = None
         self.idnDisplay.setText("Disconnected")
+        self.ChannelTable.clearContents()
 
 
     def onCopy(self):
@@ -102,6 +121,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             line.set_linewidth(1)
         self.GraphWidget.canvas.draw()
 
+
     def onScreenCapture(self):
         try:
             self.scope.takeScreenshot()
@@ -120,6 +140,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             Qt.TransformationMode.SmoothTransformation
             )
         self.screenCaptureLabel.setPixmap(scaledPixmap)
+    
     def onSavetoClipboard(self):
         #pixmap = self.GraphWidget.canvas.grab()
         if self.pixmap != None:
@@ -130,6 +151,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.excelCom = excelCom.excelCOM()
         self.excelCom.refresh()
         self.excelTreeView.setModel(self.excelCom.generateTreeView())
+        self.excelTreeView.expandAll()
         self.excelTreeView.selectionModel().selectionChanged.connect(self.onExcelTreeSelectionChanged)
     
     def onExcelTreeSelectionChanged(self,selected, deselected):

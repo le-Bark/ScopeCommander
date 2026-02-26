@@ -39,7 +39,8 @@ class rigol_1054z(oscilloscope):
         for ch in self.activeChannels:
             #todo : skip if mode is raw and channel is math
             #bug? if the traced is zoomed out in mormal mode, the full buffer is not transfered...
-            self.inst.write(":WAV:SOUR {}".format(ch))             
+            self.inst.write(":WAV:SOUR {}".format(ch))
+            self.inst.write(":WAV:FORM BYTE")
             preamble = self.inst.query(":WAV:PRE?").strip().split(",")
             points = int(preamble[2])
             yincr = float(preamble[7])
@@ -62,7 +63,8 @@ class rigol_1054z(oscilloscope):
 
         points = int(preamble[2])
         xstep = float(preamble[4])
-        self.data["time"] = [i*xstep for i in range(0,points)]
+        xorigin = float(preamble[5])
+        self.data["time"] = [i*xstep + xorigin for i in range(0,points)]
         self.scaledData["time"] = self.data["time"]
 
     def single(self):
