@@ -43,19 +43,23 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
     def channelTableSetup(self):
         tab = self.ChannelTable
         tab.clearContents()
-        tab.setColumnCount(3)
+        tab.setColumnCount(2)
         tab.setRowCount(len(self.scope.channels))
-        tab.setHorizontalHeaderLabels(["Channel", "Lable", ""])
+        tab.setHorizontalHeaderLabels(["Channel", "Label"])
+        #tab.horizontalHeader().setStretchLastSection(True)
         tab.verticalHeader().setVisible(False)
-        tab.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        tab.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        tab.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        tab.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        tab.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
+        tab.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch)
         for row,(ch,lab) in enumerate(zip(self.scope.channels,self.scope.channels)): #to set label eventually
             chItem = QTableWidgetItem(ch)
             chItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             tab.setItem(row, 0, chItem)
 
             lableItem = QTableWidgetItem("")
-            lableItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
+            lableItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
+            lableItem.setCheckState(Qt.Unchecked)
             tab.setItem(row, 1, lableItem)
 
     def onConnect(self):
