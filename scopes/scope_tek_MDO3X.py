@@ -21,6 +21,7 @@ class tek_MDO3X(oscilloscope):
         self.inst.write_termination = "\r\n"
         self.inst.read_termination = "\n"
         self.inst.timeout = 3000
+        self.maxLabelLength = 30
 
     def getActiveChannels(self):
         self.activeChannels = []
@@ -79,3 +80,14 @@ class tek_MDO3X(oscilloscope):
         self.inst.query('*OPC?')
         self.inst.write("FILESystem:READFile \"E:/temp.png\"")
         self.screenshotBuffer = self.inst.read_raw()
+
+    def getChannelLabels(self):
+        for ch in self.channels:
+            enabled = 0 #not supported
+            label = self.inst.query(":{}:lab?".format(ch)).replace("\"","")
+            self.labels[ch] = (enabled,label)
+        return self.labels
+    
+    def setChannelLabel(self,ch,enabled,label):
+        self.inst.write(":{}:lab \"{}\"".format(ch,label))
+        return self.labels

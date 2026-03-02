@@ -50,6 +50,7 @@ class oscilloscope():
         self.screenshotBuffer  = []
         self.copyWidth = copyWidth.screenData
         self.maxLabelLength = 0
+        self.labels = {}
         
 
     def connect(self):
@@ -76,12 +77,15 @@ class oscilloscope():
         print("Single not implemented")
 
     def start(self):
-        print("Single not implemented")
+        print("Start not implemented")
 
     def stop(self):
-        print("Single not implemented")
+        print("Stop not implemented")
     def takeScreenshot(self):
-        print("Single not implemented")
+        print("Screenshot not implemented")
 
     def getChannelLabels(self):
         return {}
+
+    def setChannelLabel(self,ch,enabled,label):
+        pass

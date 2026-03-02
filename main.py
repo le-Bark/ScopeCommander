@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTableWidgetItem
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QObject, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox, QHeaderView
 import sys
 import mainWindow
@@ -52,19 +52,32 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         tab.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         tab.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
         tab.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch)
-        tab.blockSignals(True)
-        for row,(ch,lab) in enumerate(zip(self.scope.channels,self.scope.channels)): #to set label eventually
+        try:
+            tab.cellChanged.connect(self.onChannelListItemChange,type=Qt.UniqueConnection)        
+        except:
+            pass
+        self.updateChannelTable()
+
+    def updateChannelTable(self):
+        
+        try:
+            self.scope.getChannelLabels()
+        except:
+            self.unlinkScope()
+            return
+
+        self.ChannelTable.blockSignals(True)
+        for row,ch in enumerate(self.scope.labels.keys()): #to set label eventually
+            enabled,label = self.scope.labels[ch]
             chItem = QTableWidgetItem(ch)
             chItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            tab.setItem(row, 0, chItem)
+            self.ChannelTable.setItem(row, 0, chItem)
 
-            lableItem = QTableWidgetItem("")
+            lableItem = QTableWidgetItem(label)
             lableItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
-            lableItem.setCheckState(Qt.Unchecked)
-            tab.setItem(row, 1, lableItem)
-        tab.disconnect()
-        tab.cellChanged.connect(self.onChannelListItemChange)
-        tab.blockSignals(False)
+            lableItem.setCheckState([Qt.Unchecked,Qt.Checked][int(enabled)])
+            self.ChannelTable.setItem(row, 1, lableItem)
+        self.ChannelTable.blockSignals(False)
 
     def onConnect(self):
         ipStr = self.ipInput.text().strip()
@@ -115,7 +128,17 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         item = self.ChannelTable.item(row,column)
         if len(item.text()) > self.scope.maxLabelLength:
             item.setText(item.text()[0:self.scope.maxLabelLength])
-
+        if self.scope != None:
+            ch = self.ChannelTable.item(row,0).text()
+            label = item.text()
+            enabled = int(not not item.checkState())
+        try:
+            self.scope.setChannelLabel(ch,enabled,label)
+            self.scope.getChannelLabels()
+        except:
+            self.unlinkScope()
+            return
+        self.updateChannelTable()
 
     def onCopy(self):
         try:
