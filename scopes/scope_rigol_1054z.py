@@ -14,6 +14,7 @@ class rigol_1054z(oscilloscope):
         self.yScaleMin = 0
         self.yScaleMax = 256
         self.maxDataTransfer = 250000
+        self.maxLabelLength = 4
     
     def getActiveChannels(self):
         self.activeChannels = []
@@ -83,5 +84,8 @@ class rigol_1054z(oscilloscope):
         imageSize = int("".join([chr(i) for i in values[2:2+headerLength]]))
         self.screenshotBuffer = values[2+headerLength:2+headerLength+imageSize]
 
+    def getChannelLabels(self):
         
+        
+        return {}
         

@@ -52,6 +52,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         tab.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         tab.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
         tab.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch)
+        tab.blockSignals(True)
         for row,(ch,lab) in enumerate(zip(self.scope.channels,self.scope.channels)): #to set label eventually
             chItem = QTableWidgetItem(ch)
             chItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -61,6 +62,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             lableItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
             lableItem.setCheckState(Qt.Unchecked)
             tab.setItem(row, 1, lableItem)
+        tab.disconnect()
+        tab.cellChanged.connect(self.onChannelListItemChange)
+        tab.blockSignals(False)
 
     def onConnect(self):
         ipStr = self.ipInput.text().strip()
@@ -105,6 +109,12 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.scope = None
         self.idnDisplay.setText("Disconnected")
         self.ChannelTable.clearContents()
+        self.ChannelTable.disconnect()
+
+    def onChannelListItemChange(self,row,column):
+        item = self.ChannelTable.item(row,column)
+        if len(item.text()) > self.scope.maxLabelLength:
+            item.setText(item.text()[0:self.scope.maxLabelLength])
 
 
     def onCopy(self):
