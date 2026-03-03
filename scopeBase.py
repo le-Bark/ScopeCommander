@@ -56,6 +56,7 @@ class oscilloscope():
     def connect(self):
         try:
             self.inst = self.rm.open_resource(self.resourceStr,open_timeout=2000)
+            self.inst.clear()
         except:
             return False
         return True

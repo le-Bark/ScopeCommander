@@ -18,12 +18,13 @@ class tek_MDO3X(oscilloscope):
         #self.resourceStr = "TCPIP::{}::4000::SOCKET".format(ipStr)
         #self.connect()
         
-        self.inst.write_termination = "\r\n"
+        self.inst.write_termination = "\n"
         self.inst.read_termination = "\n"
         self.inst.timeout = 3000
         self.maxLabelLength = 30
 
     def getActiveChannels(self):
+        self.inst.clear()
         self.activeChannels = []
         for ch in self.channels:
             self.inst.write("DAT:SOU {}".format(ch))
@@ -33,6 +34,7 @@ class tek_MDO3X(oscilloscope):
         return self.activeChannels
 
     def getChannelsBuffer(self,width=copyWidth.screenData):
+        self.inst.clear()
         self.stop()
         self.data = {}
         self.scaledData = {}
@@ -62,17 +64,21 @@ class tek_MDO3X(oscilloscope):
 
 
     def single(self):
+        self.inst.clear()
         self.inst.write(":ACQ:STATE RUN")
         self.inst.write(":ACQ:STOPA SEQ")
 
     def start(self):
+        self.inst.clear()
         self.inst.write(":ACQ:STOPA RUNST")
         self.inst.write(":ACQ:STATE RUN")
 
     def stop(self):
+        self.inst.clear()
         self.inst.write(":ACQ:STATE STOP")
 
     def takeScreenshot(self):
+        self.inst.clear()
         if self.inst.query("FILESystem?").split(";")[0] == "\"\"":
             print("No usb flash drive!")
             raise ValueError('No flash drive!')
@@ -82,6 +88,7 @@ class tek_MDO3X(oscilloscope):
         self.screenshotBuffer = self.inst.read_raw()
 
     def getChannelLabels(self):
+        self.inst.clear()
         for ch in self.channels:
             enabled = 0 #not supported
             label = self.inst.query(":{}:lab?".format(ch)).replace("\"","")
@@ -89,5 +96,6 @@ class tek_MDO3X(oscilloscope):
         return self.labels
     
     def setChannelLabel(self,ch,enabled,label):
+        self.inst.clear()
         self.inst.write(":{}:lab \"{}\"".format(ch,label))
         return self.labels

@@ -43,3 +43,22 @@ class excelCOM():
     def activateSelectedWorksheet(self):
         if self.selectedWorksheet != None:
             self.selectedWorksheet.Activate()
+
+    def getRange(self,startCell,width,height):
+        startCell = self.selectedWorksheet.Range(startCell)
+        offsetCell = startCell.Offset(height,width)
+        return self.selectedWorksheet.Range(startCell,offsetCell)
+    
+    def getNextFreeRange(self,startCell,width,height):
+        range = self.getRange(startCell,width,height)
+        while(not self.isRangeEmpty(range)):
+            start = range.Cells(1).Offset(2,1)
+            range = self.getRange(start.Address,width,height)
+        return range
+
+    def isRangeEmpty(self,range):
+        for i in range.Value:
+            for j in i:
+                if j != None:
+                    return False
+        return True

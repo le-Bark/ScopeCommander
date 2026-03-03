@@ -5,3 +5,6 @@ Scripts/
 pyvenv.cfg
 share/
 .vscode/launch.json
+build/
+dist/
+main.spec

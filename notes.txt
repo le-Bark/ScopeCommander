@@ -9,3 +9,5 @@ designer
     qt5-tools designer
     dans un shell sans le venv
     
+packager en executable
+    pyinstaller --onefile --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py

@@ -27,7 +27,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.saveClipboardButton.clicked.connect(self.onSavetoClipboard)
         self.excelRefreshButton.clicked.connect(self.onExcelRefresh)
         self.excelExportButton.clicked.connect(self.onExcelExport)
-
+        self.startButton.setEnabled(False)
+        self.stopButton.setEnabled(False)
+        self.singleTrigButton.setEnabled(False)
         self.scope = None
         self.pixmap = None
         defaultConfig = {"ip":""}
@@ -110,6 +112,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.stopButton.clicked.connect(self.onStop)
         self.copyDataButton.setEnabled(True)
         self.screenCaptureButton.setEnabled(True)
+        self.startButton.setEnabled(True)
+        self.stopButton.setEnabled(True)
+        self.singleTrigButton.setEnabled(True)
         self.channelTableSetup()
 
     def unlinkScope(self):
@@ -123,6 +128,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.idnDisplay.setText("Disconnected")
         self.ChannelTable.clearContents()
         self.ChannelTable.disconnect()
+        self.startButton.setEnabled(False)
+        self.stopButton.setEnabled(False)
+        self.singleTrigButton.setEnabled(False)
 
     def onChannelListItemChange(self,row,column):
         item = self.ChannelTable.item(row,column)
@@ -141,6 +149,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.updateChannelTable()
 
     def onCopy(self):
+        self.topTabWidget.setCurrentIndex(0)
         try:
             self.scope.getChannelsBuffer()
         except ValueError as err:
@@ -160,6 +169,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
 
 
     def onScreenCapture(self):
+        self.topTabWidget.setCurrentIndex(1)
         try:
             self.scope.takeScreenshot()
         except ValueError as err:
@@ -202,22 +212,28 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.excelCom.activateSelectedWorksheet()
         self.excelExportButton.setEnabled(True)
     
+    def channelDataToExcelFormat(self):
+        fields = ["time"] + self.scope.activeChannels
+        length = len(self.scope.scaledData["time"])
+        for i in range(0,length):
+            yield [self.scope.scaledData[f][i] for f in fields]
+    
     def onExcelExport(self):
         if self.scope == None:
             return
         if self.scope.data == {}:
             return
         #set header
-        sheet = self.excelCom.selectedWorksheet 
-        range = sheet.Range(
-            sheet.Cells(1, 1),
-            sheet.Cells(1, len(self.scope.activeChannels) + 1))
+        sheet = self.excelTreeView.selectedIndexes()[0].data(Qt.ItemDataRole.UserRole)
+        self.excelCom.selectedWorksheet = sheet
+        range = self.excelCom.getRange("A1",len(self.scope.activeChannels)+1,1)
         range.Value = ["time"] + self.scope.activeChannels
-        for i,ch in enumerate(["time"] + self.scope.activeChannels):
-            range = sheet.Range(
-                sheet.Cells(2, i+1),
-                sheet.Cells(2+len(self.scope.scaledData[ch]) - 1, i+1))
-            range.Value = [[i] for i in self.scope.scaledData[ch]]
+        if self.scope.labels != {}:
+            range = self.excelCom.getRange("B2",len(self.scope.activeChannels),1)
+            range.Value = [self.scope.labels[ch][1] for ch in self.scope.activeChannels]
+        
+        range = self.excelCom.getRange("A3",1+len(self.scope.activeChannels),len(self.scope.scaledData["time"]))
+        range.Value = list(self.channelDataToExcelFormat())
         
     def onStop(self):
         try:
