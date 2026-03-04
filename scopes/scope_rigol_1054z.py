@@ -40,6 +40,8 @@ class rigol_1054z(oscilloscope):
         for ch in self.activeChannels:
             #todo : skip if mode is raw and channel is math
             #bug? if the traced is zoomed out in mormal mode, the full buffer is not transfered...
+            #self.inst.write(":WAV:MODE RAW")
+            self.inst.write(":WAV:MODE NORM")
             self.inst.write(":WAV:SOUR {}".format(ch))
             self.inst.write(":WAV:FORM BYTE")
             preamble = self.inst.query(":WAV:PRE?").strip().split(",")

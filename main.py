@@ -27,6 +27,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.saveClipboardButton.clicked.connect(self.onSavetoClipboard)
         self.excelRefreshButton.clicked.connect(self.onExcelRefresh)
         self.excelExportButton.clicked.connect(self.onExcelExport)
+        self.toExcelButton.clicked.connect(self.onToExcel)
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(False)
         self.singleTrigButton.setEnabled(False)
@@ -90,7 +91,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.unlinkScope()
 
         self.scope = scopeBase.oscilloscope(ipStr)
-        self.linkScope()
+        #self.linkScope()
 
         if self.scope.connect():
             try:
@@ -159,6 +160,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.unlinkScope()
             return
         self.GraphWidget.canvas.ax.cla()
+        if len(self.scope.data["time"]) == 0:
+            return
         for ch in self.scope.activeChannels:
             self.ax.plot(self.scope.data["time"],self.scope.data[ch])
         self.ax.set_ylim(self.scope.yScaleMin,self.scope.yScaleMax)
@@ -181,17 +184,25 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         
         self.pixmap = QPixmap()
         self.pixmap.loadFromData(self.scope.screenshotBuffer)        
-        scaledPixmap = self.pixmap.scaled(
-            self.screenCaptureLabel.size(), 
-            Qt.AspectRatioMode.KeepAspectRatio, 
-            Qt.TransformationMode.SmoothTransformation
-            )
-        self.screenCaptureLabel.setPixmap(scaledPixmap)
+        self.screenCaptureLabel.setPixmap(self.pixmap)
+        self.screenCaptureLabel.setScaledContents(True)
     
     def onSavetoClipboard(self):
-        #pixmap = self.GraphWidget.canvas.grab()
         if self.pixmap != None:
             QApplication.clipboard().setPixmap(self.pixmap)
+
+    def onToExcel(self):
+        self.onSavetoClipboard()
+        sheet = self.excelTreeView.selectedIndexes()[0].data(Qt.ItemDataRole.UserRole)
+        self.excelCom.selectedWorksheet = sheet
+        if self.screenCaptureLabel.pixmap() is not None:
+            sheet.Range("G2").Select()
+            sheet.Paste()
+            img = sheet.Shapes(sheet.Shapes.Count)
+            img.LockAspectRatio = True
+            img.Width = 300
+
+
 
     def onExcelRefresh(self):
         if self.excelCom == None:
@@ -206,11 +217,13 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         if not indexes:
             self.excelCom.selectedWorksheet = None
             self.excelExportButton.setEnabled(False)
+            self.toExcelButton.setEnabled(False)
             return
         index = indexes[0]
         self.excelCom.selectedWorksheet = index.data(Qt.ItemDataRole.UserRole)
         self.excelCom.activateSelectedWorksheet()
         self.excelExportButton.setEnabled(True)
+        self.toExcelButton.setEnabled(True)
     
     def channelDataToExcelFormat(self):
         fields = ["time"] + self.scope.activeChannels
@@ -227,6 +240,21 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         sheet = self.excelTreeView.selectedIndexes()[0].data(Qt.ItemDataRole.UserRole)
         self.excelCom.selectedWorksheet = sheet
         range = self.excelCom.getRange("A1",len(self.scope.activeChannels)+1,1)
+        rangeFree = True
+        for i in range.Value[0]:
+            if i != None:
+                rangeFree = False
+        if rangeFree == False:
+            reply = QMessageBox.question(
+                window,
+                "Overwrite data?",
+                "Overwrite the existing data?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No  # bouton par défaut
+                )
+            if reply == QMessageBox.No:
+                return
+        
         range.Value = ["time"] + self.scope.activeChannels
         if self.scope.labels != {}:
             range = self.excelCom.getRange("B2",len(self.scope.activeChannels),1)
