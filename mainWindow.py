@@ -197,6 +197,9 @@ class Ui_MainWindow(object):
         self.excelExportButton.setEnabled(False)
         self.excelExportButton.setObjectName("excelExportButton")
         self.verticalLayout_2.addWidget(self.excelExportButton)
+        self.importButton = QtWidgets.QPushButton(self.excelTab)
+        self.importButton.setObjectName("importButton")
+        self.verticalLayout_2.addWidget(self.importButton)
         spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem4)
         self.horizontalLayout_5.addLayout(self.verticalLayout_2)
@@ -277,7 +280,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.topTabWidget.setCurrentIndex(1)
-        self.bottomTabWidget.setCurrentIndex(2)
+        self.bottomTabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -299,6 +302,7 @@ class Ui_MainWindow(object):
         self.bottomTabWidget.setTabText(self.bottomTabWidget.indexOf(self.scopeTab), _translate("MainWindow", "Scope"))
         self.excelRefreshButton.setText(_translate("MainWindow", "Refresh"))
         self.excelExportButton.setText(_translate("MainWindow", "Export"))
+        self.importButton.setText(_translate("MainWindow", "import"))
         self.bottomTabWidget.setTabText(self.bottomTabWidget.indexOf(self.excelTab), _translate("MainWindow", "Excel"))
         self.label.setText(_translate("MainWindow", "Voltage channel"))
         self.label_2.setText(_translate("MainWindow", "Current channel"))

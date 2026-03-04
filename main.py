@@ -31,6 +31,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(False)
         self.singleTrigButton.setEnabled(False)
+
+        self.importButton.clicked.connect(self.onExcelImport)
+
         self.scope = None
         self.pixmap = None
         defaultConfig = {"ip":""}
@@ -42,6 +45,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
 
         #self.excelCom = excelCom.excelCOM()
         self.excelCom = None
+        self.data = {}
+        self.scaledData = {}
+
 
     def channelTableSetup(self):
         tab = self.ChannelTable
@@ -160,12 +166,14 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.unlinkScope()
             return
         self.GraphWidget.canvas.ax.cla()
-        if len(self.scope.data["time"]) == 0:
+        self.data = self.scope.data
+        self.scaledData = self.scope.scaledData
+        if len(self.data["time"]) == 0:
             return
         for ch in self.scope.activeChannels:
-            self.ax.plot(self.scope.data["time"],self.scope.data[ch])
+            self.ax.plot(self.data["time"],self.data[ch])
         self.ax.set_ylim(self.scope.yScaleMin,self.scope.yScaleMax)
-        self.ax.set_xlim(self.scope.data["time"][0],self.scope.data["time"][-1])
+        self.ax.set_xlim(self.data["time"][0],self.data["time"][-1])
         for line in self.ax.get_lines():
             line.set_linewidth(1)
         self.GraphWidget.canvas.draw()
@@ -202,8 +210,6 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             img.LockAspectRatio = True
             img.Width = 300
 
-
-
     def onExcelRefresh(self):
         if self.excelCom == None:
             self.excelCom = excelCom.excelCOM()
@@ -227,14 +233,14 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
     
     def channelDataToExcelFormat(self):
         fields = ["time"] + self.scope.activeChannels
-        length = len(self.scope.scaledData["time"])
+        length = len(self.scaledData["time"])
         for i in range(0,length):
-            yield [self.scope.scaledData[f][i] for f in fields]
+            yield [self.scaledData[f][i] for f in fields]
     
     def onExcelExport(self):
         if self.scope == None:
             return
-        if self.scope.data == {}:
+        if self.data == {}:
             return
         #set header
         sheet = self.excelTreeView.selectedIndexes()[0].data(Qt.ItemDataRole.UserRole)
@@ -260,9 +266,23 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             range = self.excelCom.getRange("B2",len(self.scope.activeChannels),1)
             range.Value = [self.scope.labels[ch][1] for ch in self.scope.activeChannels]
         
-        range = self.excelCom.getRange("A3",1+len(self.scope.activeChannels),len(self.scope.scaledData["time"]))
+        range = self.excelCom.getRange("A3",1+len(self.scope.activeChannels),len(self.scaledData["time"]))
         range.Value = list(self.channelDataToExcelFormat())
         
+    def onExcelImport(self):
+        self.scaledData = self.excelCom.importData("A1")
+        self.GraphWidget.canvas.ax.cla()
+        channels = [i for i in self.scaledData.keys()]#.remove("time")
+        channels.remove("time")
+        for ch in channels:
+            self.ax.plot(self.scaledData["time"],self.scaledData[ch])
+        #self.ax.set_ylim(self.scope.yScaleMin,self.scope.yScaleMax)
+        #self.ax.set_xlim(self.data["time"][0],self.data["time"][-1])
+        for line in self.ax.get_lines():
+            line.set_linewidth(1)
+        self.GraphWidget.canvas.draw()
+        
+
     def onStop(self):
         try:
             self.scope.stop()

@@ -188,7 +188,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="scopeTab">
        <attribute name="title">
@@ -460,6 +460,13 @@
             </property>
             <property name="text">
              <string>Export</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="importButton">
+            <property name="text">
+             <string>import</string>
             </property>
            </widget>
           </item>

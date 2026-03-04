@@ -62,3 +62,19 @@ class excelCOM():
                 if j != None:
                     return False
         return True
+    
+    def importData(self,range):
+        startCell = self.selectedWorksheet.Range("A1")
+        if startCell.Value == None:
+            return
+        endOfHeader = startCell
+        region = startCell.CurrentRegion
+        excelData = region.Value
+        header = list(excelData[0])
+        data = {}
+        dataLength = len(excelData) - 2
+        for i,h in enumerate(header):
+            data[h] = [j[i] for j in excelData[2:]]
+        return data
+            
+        
