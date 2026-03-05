@@ -9,6 +9,8 @@ from scopes.scope_rigol_1054z import rigol_1054z
 from scopes import scopeCompatibility
 from config import controlConfig
 import excelCom
+from tracePlot import graphTab
+from energyCalculator import energyCalculator
 
 app = QApplication(sys.argv)
 
@@ -17,7 +19,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         super(self.__class__, self).__init__()
         self.setupUi(self)
         self.ax = self.GraphWidget.canvas.ax
-
+        self.energyGraphTab = None
         self.topTabWidget.setCurrentIndex(0)
         self.bottomTabWidget.setCurrentIndex(0)
 
@@ -33,7 +35,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.singleTrigButton.setEnabled(False)
 
         self.importButton.clicked.connect(self.onExcelImport)
-
+        self.calculateEnergyButton.clicked.connect(self.onCalculateEnergy)
         self.scope = None
         self.pixmap = None
         defaultConfig = {"ip":""}
@@ -45,8 +47,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
 
         #self.excelCom = excelCom.excelCOM()
         self.excelCom = None
-        self.data = {}
-        self.scaledData = {}
+        self.data = scopeBase.channelData()
 
 
     def channelTableSetup(self):
@@ -167,17 +168,15 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             return
         self.GraphWidget.canvas.ax.cla()
         self.data = self.scope.data
-        self.scaledData = self.scope.scaledData
-        if len(self.data["time"]) == 0:
+        if len(self.data) == 0:
             return
-        for ch in self.scope.activeChannels:
-            self.ax.plot(self.data["time"],self.data[ch])
+        for ch in self.data.channels:
+            self.ax.plot(self.data.time,self.data.raw[ch])
         self.ax.set_ylim(self.scope.yScaleMin,self.scope.yScaleMax)
-        self.ax.set_xlim(self.data["time"][0],self.data["time"][-1])
+        self.ax.set_xlim(self.data.time[0],self.data.time[-1])
         for line in self.ax.get_lines():
             line.set_linewidth(1)
         self.GraphWidget.canvas.draw()
-
 
     def onScreenCapture(self):
         self.topTabWidget.setCurrentIndex(1)
@@ -232,20 +231,18 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.toExcelButton.setEnabled(True)
     
     def channelDataToExcelFormat(self):
-        fields = ["time"] + self.scope.activeChannels
-        length = len(self.scaledData["time"])
+        fields = self.data.channels
+        length = len(self.data)
         for i in range(0,length):
-            yield [self.scaledData[f][i] for f in fields]
+            yield [self.data.time[i]] + [self.data.scaled[f][i] for f in fields]
     
     def onExcelExport(self):
-        if self.scope == None:
-            return
-        if self.data == {}:
+        if len(self.data) == 0:
             return
         #set header
         sheet = self.excelTreeView.selectedIndexes()[0].data(Qt.ItemDataRole.UserRole)
         self.excelCom.selectedWorksheet = sheet
-        range = self.excelCom.getRange("A1",len(self.scope.activeChannels)+1,1)
+        range = self.excelCom.getRange("A1",len(self.data.channels)+1,1)
         rangeFree = True
         for i in range.Value[0]:
             if i != None:
@@ -261,26 +258,28 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             if reply == QMessageBox.No:
                 return
         
-        range.Value = ["time"] + self.scope.activeChannels
-        if self.scope.labels != {}:
-            range = self.excelCom.getRange("B2",len(self.scope.activeChannels),1)
-            range.Value = [self.scope.labels[ch][1] for ch in self.scope.activeChannels]
-        
-        range = self.excelCom.getRange("A3",1+len(self.scope.activeChannels),len(self.scaledData["time"]))
+        range.Value = ["time"] + self.data.channels
+        if self.scope != None:
+            if self.scope.labels != {}:
+                range = self.excelCom.getRange("B2",len(self.scope.activeChannels),1)
+                range.Value = [self.scope.labels[ch][1] for ch in self.scope.activeChannels]
+        sheet.Range("A2").Value = "Labels ->"
+        range = self.excelCom.getRange("A3",1+len(self.data.channels),len(self.data))
         range.Value = list(self.channelDataToExcelFormat())
         
     def onExcelImport(self):
-        self.scaledData = self.excelCom.importData("A1")
+        self.data = scopeBase.channelData()
+        self.data = self.excelCom.importData("A1")
         self.GraphWidget.canvas.ax.cla()
-        channels = [i for i in self.scaledData.keys()]#.remove("time")
-        channels.remove("time")
-        for ch in channels:
-            self.ax.plot(self.scaledData["time"],self.scaledData[ch])
+        
+        for ch in self.data.channels:
+            self.ax.plot(self.data.time,self.data.scaled[ch])
         #self.ax.set_ylim(self.scope.yScaleMin,self.scope.yScaleMax)
         #self.ax.set_xlim(self.data["time"][0],self.data["time"][-1])
         for line in self.ax.get_lines():
             line.set_linewidth(1)
         self.GraphWidget.canvas.draw()
+        self.updateEnergyGUI()
         
 
     def onStop(self):
@@ -298,7 +297,56 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.scope.single()
         except:
             self.unlinkScope()
+
+    def updateEnergyGUI(self):
+        self.energyVoltageComboBox.clear()
+        self.energyCurrentcomboBox.clear()
+        self.energyCurrentcomboBoxMinus.clear()
+        self.energyCurrentcomboBoxMinus.addItem("0")
+        for ch in self.data.channels:
+            self.energyVoltageComboBox.addItem(ch)
+            self.energyCurrentcomboBox.addItem(ch)
+            self.energyCurrentcomboBoxMinus.addItem(ch)
+        self.calculateEnergyButton.setEnabled(True)
         
+    def onCalculateEnergy(self):
+        if self.energyGraphTab == None:
+            self.energyGraphTab = graphTab(self.topTabWidget)
+            self.topTabWidget.addTab(self.energyGraphTab, "Energy graph")
+            ax1 = self.energyGraphTab.GraphWidget.canvas.ax
+            self.energyGraphTab.GraphWidget.canvas.ax2 = ax1.twinx()
+        self.topTabWidget.setCurrentIndex(2)
+        V = self.data.scaled[self.energyVoltageComboBox.currentText()]
+        I = self.data.scaled[self.energyCurrentcomboBox.currentText()]
+        Iminus = None
+        IminusChannel = self.energyCurrentcomboBoxMinus.currentText()
+        if IminusChannel != "0":
+            Iminus = self.data.scaled[IminusChannel]
+        self.energyCalculator = energyCalculator(self.data.time,V,I,Iminus)
+
+        fig = self.energyGraphTab.GraphWidget.canvas.fig
+        ax1 = self.energyGraphTab.GraphWidget.canvas.ax
+        ax2 = self.energyGraphTab.GraphWidget.canvas.ax2
+        ax1.cla()
+        ax2.cla()
+
+        self.energyCalculator.integrateEdge()
+
+        ax1.plot(self.energyCalculator.time,self.energyCalculator.voltage)
+        ax2.plot(self.energyCalculator.time,self.energyCalculator.current)
+        #if self.energyCalculator.currentMinus != None:
+        #    ax2.plot(self.energyCalculator.time,self.energyCalculator.currentMinus)
+        
+        print(self.energyCalculator.result)
+
+        ax1.annotate("Vmax",xy=self.energyCalculator.result["V max (V)"])
+        ax1.annotate("Vhigh",xy=self.energyCalculator.result["V high (V)"])
+        ax1.annotate("dv/dt",xy=self.energyCalculator.result["Rise / Falltime"])
+
+        
+
+        fig.tight_layout()
+        self.energyGraphTab.GraphWidget.canvas.draw()
 
 
 window = scopeCommander()

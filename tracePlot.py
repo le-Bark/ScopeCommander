@@ -27,20 +27,23 @@ class tracePlotterWidget(QtWidgets.QWidget):
         self.vbl.addWidget(NavigationToolbar(self.canvas,self))
         self.setLayout(self.vbl)
 
-class screenCaptureWidget(QtWidgets.QLabel):
+class graphTab(QtWidgets.QWidget):
     def __init__(self, parent=None):
-        QtWidgets.QLabel.__init__(self, parent)   # Inherit from QWidget
-        pixmap = QPixmap("./DS1Z_QuickPrint7.png")
-        self.setPixmap(pixmap)
-        self.setText("asd")
-        print("pppppppp")
+        QtWidgets.QWidget.__init__(self, parent)
+        self.setEnabled(True)
+        self.setObjectName("GraphTab")
 
-#class screenCaptureCanvas(Canvas):
-#    def __init__(self):
-#        self.fig = Figure()
-#        self.ax = self.fig.add_subplot(111)
-#        self.fig.tight_layout()
-#
-#        Canvas.__init__(self, self.fig)
-#        Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-#        Canvas.updateGeometry(self)
+        self.verticalLayout = QtWidgets.QVBoxLayout(self)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout.setSpacing(0)
+        #self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.GraphWidget = tracePlotterWidget(self)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.GraphWidget.sizePolicy().hasHeightForWidth())
+        self.GraphWidget.setSizePolicy(sizePolicy)
+        self.GraphWidget.setObjectName("GraphWidget")
+        self.verticalLayout.addWidget(self.GraphWidget)
+
+

@@ -10,16 +10,26 @@ class dataScaler():
         self.data = data
         self.factor = float(factor)
         self.offset = float(offset)
+        self.index = 0
 
     def __len__(self):
         return len(self.data)
-
+    
     def __getitem__(self, index):
-        return self.data[index] * self.factor + self.offset
-
+        if isinstance(index, slice):
+            return (i * self.factor + self.offset for i in self.data[index])
+        else:
+            return self.data[index] * self.factor + self.offset
+    
+    def __next__(self):
+        if self.index >= len(self):
+            raise StopIteration
+        ret = self[self.index]
+        self.index += 1
+        return ret
+    
     def __iter__(self):
-        for item in self.data:
-            yield item * self.factor + self.offset
+        return dataScaler(self.data,self.factor,self.offset)
 
 class timeScale():
     def __init__(self, len, step, offset = 0):
@@ -34,6 +44,14 @@ class timeScale():
         for i in range(0,self.length):
             yield i * self.step + self.offset
 
+class channelData():
+    raw = {}
+    scaled = {}
+    channels = []
+    time = []
+    def __len__(self):
+        return len(self.time)
+
 class oscilloscope():
     def __init__(self,ipStr):
         self.rm = pyvisa.ResourceManager()
@@ -41,8 +59,9 @@ class oscilloscope():
         self.resourceStr = "TCPIP::{}::INSTR".format(self.ipStr)
         self.inst = None
         self.memDepth = 0
-        self.data = {}
-        self.scaledData = {}
+        #self.data = {}
+        #self.scaledData = {}
+        self.data = channelData()
         self.activeChannels = []
         self.channels = []
         self.yScaleMin = 0
@@ -52,7 +71,6 @@ class oscilloscope():
         self.maxLabelLength = 0
         self.labels = {}
         
-
     def connect(self):
         try:
             self.inst = self.rm.open_resource(self.resourceStr,open_timeout=2000)

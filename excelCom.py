@@ -1,6 +1,7 @@
 import win32com.client
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
+from scopeBase import channelData, dataScaler
 
 class excelCOM():
     def __init__(self):
@@ -67,14 +68,18 @@ class excelCOM():
         startCell = self.selectedWorksheet.Range("A1")
         if startCell.Value == None:
             return
-        endOfHeader = startCell
         region = startCell.CurrentRegion
         excelData = region.Value
         header = list(excelData[0])
-        data = {}
+        data = channelData()
         dataLength = len(excelData) - 2
+        data.channels = list(excelData[0][1:])
         for i,h in enumerate(header):
-            data[h] = [j[i] for j in excelData[2:]]
+            if h == "time":
+                data.time = [j[i] for j in excelData[2:]]
+            else:
+                data.raw[h] = [j[i] for j in excelData[2:]]
+                data.scaled[h] = dataScaler(data.raw[h],1,0)
         return data
             
         

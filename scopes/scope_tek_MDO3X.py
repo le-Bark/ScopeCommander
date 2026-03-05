@@ -2,6 +2,7 @@ from scopeBase import oscilloscope
 from scopeBase import dataScaler
 from scopeBase import timeScale
 from scopeBase import copyWidth
+from scopeBase import channelData
 
 class tek_MDO3X(oscilloscope):
     def __init__(self,ipStr):
@@ -36,9 +37,10 @@ class tek_MDO3X(oscilloscope):
     def getChannelsBuffer(self,width=copyWidth.screenData):
         self.inst.clear()
         self.stop()
-        self.data = {}
+        self.data = channelData()
         self.scaledData = {}
         self.getActiveChannels()
+        self.data.channels = self.activeChannels
         
         recordLength = int(self.inst.query(":HOR:RECO?"))
 
@@ -50,18 +52,16 @@ class tek_MDO3X(oscilloscope):
             self.inst.write(":HEADer 0")
             self.inst.write(":WFMInpre:ENCdg BIN")
 
-            self.data[ch] = self.inst.query_binary_values('CURV?', datatype='b')
+            self.data.raw[ch] = self.inst.query_binary_values('CURV?', datatype='b')
 
             header = self.inst.query("WFMOutpre?").strip().split(";")
             scale = float(header[14])
             offset = float(header[15])
-            self.scaledData[ch] = dataScaler(self.data[ch],scale,-offset*scale)
+            self.data.scaled[ch] = dataScaler(self.data[ch],scale,-offset*scale)
 
         xZero = float(self.inst.query(":WFMOutpre:XZEro?"))
         xIncr = float(self.inst.query(":WFMOutpre:XINcr?"))
-        self.data["time"] = [ xZero + i*xIncr for i in range(1,recordLength+1)]
-        self.scaledData["time"] = self.data["time"]
-
+        self.data.time = [ xZero + i*xIncr for i in range(1,recordLength+1)]
 
     def single(self):
         self.inst.clear()

@@ -255,9 +255,9 @@ class Ui_MainWindow(object):
         self.label_3 = QtWidgets.QLabel(self.energyTab)
         self.label_3.setObjectName("label_3")
         self.horizontalLayout_10.addWidget(self.label_3)
-        self.comboBox = QtWidgets.QComboBox(self.energyTab)
-        self.comboBox.setObjectName("comboBox")
-        self.horizontalLayout_10.addWidget(self.comboBox)
+        self.energyCurrentcomboBoxMinus = QtWidgets.QComboBox(self.energyTab)
+        self.energyCurrentcomboBoxMinus.setObjectName("energyCurrentcomboBoxMinus")
+        self.horizontalLayout_10.addWidget(self.energyCurrentcomboBoxMinus)
         self.verticalLayout_7.addLayout(self.horizontalLayout_10)
         self.calculateEnergyButton = QtWidgets.QPushButton(self.energyTab)
         self.calculateEnergyButton.setObjectName("calculateEnergyButton")
@@ -280,7 +280,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.topTabWidget.setCurrentIndex(1)
-        self.bottomTabWidget.setCurrentIndex(1)
+        self.bottomTabWidget.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
