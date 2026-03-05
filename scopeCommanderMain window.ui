@@ -188,7 +188,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="scopeTab">
        <attribute name="title">
@@ -586,7 +586,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="comboBox"/>
+             <widget class="QComboBox" name="energyCurrentcomboBoxMinus"/>
             </item>
            </layout>
           </item>
