@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import QMessageBox, QHeaderView
 import sys
 import mainWindow
 import scopeBase
-from scopes.scope_rigol_1054z import rigol_1054z
 from scopes import scopeCompatibility
 from config import controlConfig
 import excelCom
@@ -177,6 +176,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         for line in self.ax.get_lines():
             line.set_linewidth(1)
         self.GraphWidget.canvas.draw()
+        self.updateEnergyGUI()
+
 
     def onScreenCapture(self):
         self.topTabWidget.setCurrentIndex(1)
@@ -271,7 +272,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.data = scopeBase.channelData()
         self.data = self.excelCom.importData("A1")
         self.GraphWidget.canvas.ax.cla()
-        
+        if len(self.data) == 0:
+            return
         for ch in self.data.channels:
             self.ax.plot(self.data.time,self.data.scaled[ch])
         #self.ax.set_ylim(self.scope.yScaleMin,self.scope.yScaleMax)
