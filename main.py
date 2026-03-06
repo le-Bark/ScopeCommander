@@ -32,12 +32,23 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(False)
         self.singleTrigButton.setEnabled(False)
+        self.energyExportButton.clicked.connect(self.onExportEnergy)
+
+        self.energyFirstCellEdit.textChanged.connect(self.onEnergyConfigChange)
+        self.energyVoltageComboBox.currentTextChanged.connect(self.onEnergyConfigChange)
+        self.energyCurrentcomboBox.currentTextChanged.connect(self.onEnergyConfigChange)
+        self.energyCurrentcomboBoxMinus.currentTextChanged.connect(self.onEnergyConfigChange)
 
         self.importButton.clicked.connect(self.onExcelImport)
+        self.importButton.setEnabled(False)
         self.calculateEnergyButton.clicked.connect(self.onCalculateEnergy)
         self.scope = None
         self.pixmap = None
-        defaultConfig = {"ip":""}
+        defaultConfig = {"ip":"",
+                         "voltageChannel":"",
+                         "currentChannel":"",
+                         "currentMinusChannel":"",
+                         "energyFirstCell":"A1"}
         self.configReader = controlConfig("config.json",defaultConfig)
         self.configReader.readConfig()
         self.ipInput.setText(self.configReader.config["ip"])
@@ -47,6 +58,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         #self.excelCom = excelCom.excelCOM()
         self.excelCom = None
         self.data = scopeBase.channelData()
+        self.energyResult = {}
 
 
     def channelTableSetup(self):
@@ -224,12 +236,16 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.excelCom.selectedWorksheet = None
             self.excelExportButton.setEnabled(False)
             self.toExcelButton.setEnabled(False)
+            self.importButton.setEnabled(False)
+            self.energyExportButton.setEnabled(False)
             return
         index = indexes[0]
         self.excelCom.selectedWorksheet = index.data(Qt.ItemDataRole.UserRole)
         self.excelCom.activateSelectedWorksheet()
         self.excelExportButton.setEnabled(True)
+        self.importButton.setEnabled(True)
         self.toExcelButton.setEnabled(True)
+        self.energyExportButton.setEnabled(True)
     
     def channelDataToExcelFormat(self):
         fields = self.data.channels
@@ -301,6 +317,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.unlinkScope()
 
     def updateEnergyGUI(self):
+        self.energyVoltageComboBox.blockSignals(True)
+        self.energyCurrentcomboBox.blockSignals(True)
+        self.energyCurrentcomboBoxMinus.blockSignals(True)
         self.energyVoltageComboBox.clear()
         self.energyCurrentcomboBox.clear()
         self.energyCurrentcomboBoxMinus.clear()
@@ -310,6 +329,16 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             self.energyCurrentcomboBox.addItem(ch)
             self.energyCurrentcomboBoxMinus.addItem(ch)
         self.calculateEnergyButton.setEnabled(True)
+        for b,config in [(self.energyVoltageComboBox,"voltageChannel"),(self.energyCurrentcomboBox,"currentChannel"),(self.energyCurrentcomboBoxMinus,"currentMinusChannel")]:
+            if self.configReader.config[config] in self.data.channels + ["0"]:
+                b.setCurrentText(self.configReader.config[config])
+        self.energyVoltageComboBox.blockSignals(False)
+        self.energyCurrentcomboBox.blockSignals(False)
+        self.energyCurrentcomboBoxMinus.blockSignals(False)
+        self.energyFirstCellEdit.blockSignals(True)
+        self.energyFirstCellEdit.setText(self.configReader.config["energyFirstCell"])
+        self.energyFirstCellEdit.blockSignals(False)
+
         
     def onCalculateEnergy(self):
         if self.energyGraphTab == None:
@@ -333,23 +362,71 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         ax2.cla()
 
         self.energyCalculator.integrateEdge()
-
+        self.energyResult = self.energyCalculator.result
         ax1.plot(self.energyCalculator.time,self.energyCalculator.voltage)
         ax2.plot(self.energyCalculator.time,self.energyCalculator.current)
         #if self.energyCalculator.currentMinus != None:
         #    ax2.plot(self.energyCalculator.time,self.energyCalculator.currentMinus)
         
-        print(self.energyCalculator.result)
+        #print(self.energyCalculator.result)
 
-        ax1.annotate("Vmax",xy=self.energyCalculator.result["V max (V)"])
-        ax1.annotate("Vhigh",xy=self.energyCalculator.result["V high (V)"])
-        ax1.annotate("dv/dt",xy=self.energyCalculator.result["Rise / Falltime"])
+        annotations = [
+            ("Vmax","V max (V)",ax1),
+            ("Imax","I max (A)",ax2),
+            ("Vhigh","V high (V)",ax1),
+            ("dv/dt","dv / dt (V/us)",ax1),
+            ("Itop","Itop (A)",ax2),
+            ("dI/dt","dI /dt (A / us)",ax2),
+        ]
 
-        
+        for label, index, ax in annotations:
+            x,val = self.energyCalculator.result[index]
+            if label == "dv/dt":
+                xy = (self.energyCalculator.time[x], self.energyCalculator.voltage[x])
+            elif label == "dI/dt":
+                xy = (self.energyCalculator.time[x], self.energyCalculator.current[x])
+            else:
+                xy = (self.energyCalculator.time[x],val)
+            ax.annotate(label,xy=xy)
+
 
         fig.tight_layout()
         self.energyGraphTab.GraphWidget.canvas.draw()
+        self.energyTableUpdate(self.energyCalculator.result)
 
+    def energyTableUpdate(self,result):
+        tab = self.energyTableWidget
+        tab.clearContents()
+        tab.setColumnCount(1)
+        tab.setRowCount(len(result))
+        tab.setVerticalHeaderLabels(list(result.keys()))
+        tab.horizontalHeader().setVisible(False)
+        tab.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        tab.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
+        
+        for i,k in enumerate(result.keys()): #to set label eventually
+            chItem = QTableWidgetItem("{:.3f}".format(result[k][1]))
+            chItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            tab.setItem(0, i, chItem)
+
+    def onExportEnergy(self):
+        firstCellAddress = self.energyFirstCellEdit.text().strip()
+        dataWidth = len(self.energyResult)
+        if dataWidth == 0:
+            return
+        rng = self.excelCom.getRange(firstCellAddress,dataWidth,1)
+        if self.excelCom.isRangeEmpty(rng):
+            rng.Value = [[k for k in self.energyResult.keys()]]
+
+        rng = self.excelCom.getNextFreeRange(firstCellAddress,dataWidth,1)
+        rng.Value = [[self.energyResult[k][1] for k in self.energyResult.keys()]]
+
+    def onEnergyConfigChange(self,arg):
+        self.configReader.config["voltageChannel"] = self.energyVoltageComboBox.currentText()
+        self.configReader.config["currentChannel"] = self.energyCurrentcomboBox.currentText()
+        self.configReader.config["currentMinusChannel"] = self.energyCurrentcomboBoxMinus.currentText()
+        self.configReader.config["energyFirstCell"] = self.energyFirstCellEdit.text()
+        self.configReader.writeConfig()
 
 window = scopeCommander()
 window.show()

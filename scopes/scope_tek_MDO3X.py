@@ -57,11 +57,12 @@ class tek_MDO3X(oscilloscope):
             header = self.inst.query("WFMOutpre?").strip().split(";")
             scale = float(header[14])
             offset = float(header[15])
-            self.data.scaled[ch] = dataScaler(self.data[ch],scale,-offset*scale)
+            self.data.scaled[ch] = dataScaler(self.data.raw[ch],scale,-offset*scale)
 
         xZero = float(self.inst.query(":WFMOutpre:XZEro?"))
         xIncr = float(self.inst.query(":WFMOutpre:XINcr?"))
         self.data.time = [ xZero + i*xIncr for i in range(1,recordLength+1)]
+        self.data.channels = list(self.data.raw.keys())
 
     def single(self):
         self.inst.clear()

@@ -518,7 +518,7 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QTableView" name="energyTableView"/>
+         <widget class="QTableWidget" name="energyTableWidget"/>
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -598,11 +598,31 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="energyExportButton">
-            <property name="text">
-             <string>export</string>
+           <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,8">
+            <property name="leftMargin">
+             <number>0</number>
             </property>
-           </widget>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLineEdit" name="energyFirstCellEdit">
+              <property name="text">
+               <string>A1</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="energyExportButton">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>export</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
            <spacer name="verticalSpacer_4">
