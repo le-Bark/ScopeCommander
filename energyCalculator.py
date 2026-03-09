@@ -79,7 +79,15 @@ class energyCalculator():
         for i in range(len(a)):
             a[i] = a[i] - b[i] - offset
 
-
+    def maxdxdt(self,data,dt,window,sign = 1):
+        maxIndex = 0
+        dxdtMax = 0
+        for i in range(0,len(data)-window,1):
+            dxdt = (data[i + window -1] - data[i]) / window / dt
+            if sign * dxdt > dxdtMax:
+                dxdtMax = sign * dxdt
+                maxIndex = i
+        return (maxIndex,sign*dxdtMax)
 
     def integrateEdge(self):
         self.result = {}
@@ -124,10 +132,6 @@ class energyCalculator():
                     if v <= 0.1 * Vhigh[1]:
                         t10p = i
                         v10p = v
-                elif i < minV[0]:
-                    dvdt = (v-lastv) / dt
-                    if dvdt < maxdvdt[1]:
-                        maxdvdt = (i,dvdt)
 
                 if t90p == 0:
                     if v <= 0.9 * Vhigh[1]:
@@ -135,7 +139,8 @@ class energyCalculator():
                         v90p = v
                 lastv = v
             self.result["Rise / Falltime (ns)"] = (int((t90p + t10p)/2), (self.time[t10p] - self.time[t90p]) * 1e9)
-        
+            maxdvdt = self.maxdxdt(self.voltage[t10p:t90p],dt,10,-1)
+            maxdvdt = (maxdvdt[0] + t10p, maxdvdt[1] * 1e-6)        
         else:
             Vhigh = (index95Percent,mean(self.voltage[index95Percent:]))
             self.result["V high (V)"] = Vhigh
@@ -145,18 +150,16 @@ class energyCalculator():
                     if v >= 0.1 * Vhigh[1]:
                         t10p = i
                         v10p = v
-                elif i < maxV[0]:
-                    dvdt = (v-lastv) / dt
-                    if dvdt > maxdvdt[1]:
-                        maxdvdt = (i,dvdt)
                 if t90p == 0:
                     if v >= 0.9 * Vhigh[1]:
                         t90p = i
                         v90p = v
                 lastv = v
             self.result["Rise / Falltime (ns)"] = (int((t90p + t10p)/2), (self.time[t90p] - self.time[t10p]) * 1e9 )
-        
-        maxdvdt = (maxdvdt[0],maxdvdt[1] / 1e6)
+            maxdvdt = self.maxdxdt(self.voltage[t10p:maxV[0]],dt,10,1)
+            maxdvdt = (maxdvdt[0] + t10p, maxdvdt[1] * 1e-6)
+
+        #maxdvdt = (maxdvdt[0],maxdvdt[1] / 1e6)
         self.result["dv / dt (V/us)"] = maxdvdt
 
         maxI = (0,0)
@@ -171,27 +174,32 @@ class energyCalculator():
         #turn ON
         if self.current[0] < self.current[-1]:
             Itop = (index95Percent,mean(self.current[index95Percent:]))
-            for i,I in enumerate(self.current):
-                if i > maxI[0]:
+            index10pCurrent = 0
+            index90pCurrent = 0
+            for i, cur in enumerate(self.current):
+                if index10pCurrent == 0 and cur >= Itop[1]*0.05:
+                    index10pCurrent = i
+                elif index90pCurrent == 0 and cur >= Itop[1]*0.9:
+                    index90pCurrent = i
                     break
-                if I >= Itop[1] * 0.1:
-                    didt = (I - lastI) / dt
-                    if didt > maxdidt[1]:
-                        maxdidt = (i,didt)
-                lastI = I
+            maxdidt = self.maxdxdt(self.current[index10pCurrent:index90pCurrent],dt,10,1)
+            maxdidt = (maxdidt[0] + index10pCurrent, maxdidt[1] * 1e-6)
+            
         #turn OFF
         else:
             Itop = (0,mean(self.current[0:index5Percent]))
-            for i,I in enumerate(self.current):
-                if i < Itop[0] * 0.1:
+            index10pCurrent = 0
+            index90pCurrent = 0
+            for i, cur in enumerate(self.current):
+                if index90pCurrent == 0 and cur <= Itop[1]*0.9:
+                    index90pCurrent = i
+                elif index10pCurrent == 0 and cur <= Itop[1]*0.05:
+                    index10pCurrent = i
                     break
-                if I <= Itop[1] * 0.9:
-                    didt = (I - lastI) / dt
-                    if didt < maxdidt[1]:
-                        maxdidt = (i,didt)
-                lastI = I
+            maxdidt = self.maxdxdt(self.current[index90pCurrent:index10pCurrent],dt,10,-1)
+            maxdidt = (maxdidt[0] + index90pCurrent, maxdidt[1] * 1e-6)
 
-        self.result["dI /dt (A / us)"] = (maxdidt[0],maxdidt[1] / 1e6)
+        self.result["dI /dt (A / us)"] = maxdidt
         self.result["Itop (A)"] = Itop 
 
         #integrate

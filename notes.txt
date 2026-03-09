@@ -10,4 +10,6 @@ designer
     dans un shell sans le venv
     
 packager en executable
-    pyinstaller --onefile --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py
+    pyinstaller --name scope-commander --onefile --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py
+    ou
+    pyinstaller --name scope-commander --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py
