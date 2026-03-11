@@ -3,10 +3,11 @@ import math
 from statistics import stdev, mean
 
 class energyCalculator():
-    def __init__(self,time,voltage,current,currentMinus=None):
+    def __init__(self,time,voltage,current,currentMinus,integrationWindow):
         kernel = [1,2,3,4,5,6,5,4,3,2,1] 
         self.voltage = self.kernelSmooth(voltage,kernel)
         self.current = self.kernelSmooth(current,kernel)
+        self.integrationWindow = integrationWindow
         if currentMinus == None:
             self.currentMinus = None
         else:
@@ -201,14 +202,20 @@ class energyCalculator():
 
         self.result["dI /dt (A / us)"] = maxdidt
         self.result["Itop (A)"] = Itop 
-
+        
         #integrate
+        integrationMin = (t90p+t10p) / 2 - abs(t90p-t10p) * self.integrationWindow/2
+        integrationMax = (t90p+t10p) / 2 + abs(t90p-t10p) * self.integrationWindow/2
+        self.integrationMin = int(max(0,integrationMin))
+        self.integrationMax = int(min(integrationMax,len(self.voltage)-1))
+        
         dt = self.time[1] - self.time[0]
-        lastvi = self.voltage[0] * self.current[0]
+        lastvi = self.voltage[self.integrationMin] * self.current[self.integrationMin]
         energy = 0
-        for v,i in zip(self.voltage[1:],self.current[1:]):
+        for v,i in zip(self.voltage[1 + self.integrationMin:self.integrationMax],self.current[1 + self.integrationMin:self.integrationMax]):
             vi = v*i
-            energy += abs((vi + lastvi) * dt / 2)
+            #energy += abs((vi + lastvi) * dt / 2)
+            energy += (vi + lastvi) * dt / 2
             lastvi = vi
         self.result["Energy (mJ)"] = (0,energy * 1000)
         

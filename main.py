@@ -38,6 +38,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.energyVoltageComboBox.currentTextChanged.connect(self.onEnergyConfigChange)
         self.energyCurrentcomboBox.currentTextChanged.connect(self.onEnergyConfigChange)
         self.energyCurrentcomboBoxMinus.currentTextChanged.connect(self.onEnergyConfigChange)
+        self.integrationWindowSpinBox.valueChanged.connect(self.onEnergyConfigChange)
 
         self.importButton.clicked.connect(self.onExcelImport)
         self.importButton.setEnabled(False)
@@ -48,7 +49,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
                          "voltageChannel":"",
                          "currentChannel":"",
                          "currentMinusChannel":"",
-                         "energyFirstCell":"A1"}
+                         "energyFirstCell":"A1",
+                         "energyIntegrationWindow": 3}
         self.configReader = controlConfig("config.json",defaultConfig)
         self.configReader.readConfig()
         self.ipInput.setText(self.configReader.config["ip"])
@@ -169,6 +171,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
 
     def onCopy(self):
         self.topTabWidget.setCurrentIndex(0)
+        self.GraphWidget.canvas.ax.cla()
         try:
             self.scope.getChannelsBuffer()
         except ValueError as err:
@@ -177,7 +180,6 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         except:
             self.unlinkScope()
             return
-        self.GraphWidget.canvas.ax.cla()
         self.data = self.scope.data
         if len(self.data) == 0:
             return
@@ -259,12 +261,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         #set header
         sheet = self.excelTreeView.selectedIndexes()[0].data(Qt.ItemDataRole.UserRole)
         self.excelCom.selectedWorksheet = sheet
-        range = self.excelCom.getRange("A1",len(self.data.channels)+1,1)
-        rangeFree = True
-        for i in range.Value[0]:
-            if i != None:
-                rangeFree = False
-        if rangeFree == False:
+        range = self.excelCom.getRange("A1",len(self.data.channels)+1,len(self.data)+2)
+        if not self.excelCom.isRangeEmpty(range):
             reply = QMessageBox.question(
                 window,
                 "Overwrite data?",
@@ -274,7 +272,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
                 )
             if reply == QMessageBox.No:
                 return
-        
+        range = self.excelCom.getRange("A1",len(self.data.channels)+1,1)
         range.Value = ["time"] + self.data.channels
         if self.scope != None:
             if self.scope.labels != {}:
@@ -338,6 +336,9 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.energyFirstCellEdit.blockSignals(True)
         self.energyFirstCellEdit.setText(self.configReader.config["energyFirstCell"])
         self.energyFirstCellEdit.blockSignals(False)
+        self.integrationWindowSpinBox.blockSignals(True)
+        self.integrationWindowSpinBox.setValue(self.configReader.config["energyIntegrationWindow"])
+        self.integrationWindowSpinBox.blockSignals(False)
 
         
     def onCalculateEnergy(self):
@@ -353,7 +354,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         IminusChannel = self.energyCurrentcomboBoxMinus.currentText()
         if IminusChannel != "0":
             Iminus = self.data.scaled[IminusChannel]
-        self.energyCalculator = energyCalculator(self.data.time,V,I,Iminus)
+        integrationWindow = self.integrationWindowSpinBox.value()
+        self.energyCalculator = energyCalculator(self.data.time,V,I,Iminus,integrationWindow)
 
         fig = self.energyGraphTab.GraphWidget.canvas.fig
         ax1 = self.energyGraphTab.GraphWidget.canvas.ax
@@ -363,12 +365,11 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
 
         self.energyCalculator.integrateEdge()
         self.energyResult = self.energyCalculator.result
-        ax1.plot(self.energyCalculator.time,self.energyCalculator.voltage)
-        ax2.plot(self.energyCalculator.time,self.energyCalculator.current)
-        #if self.energyCalculator.currentMinus != None:
-        #    ax2.plot(self.energyCalculator.time,self.energyCalculator.currentMinus)
-        
-        #print(self.energyCalculator.result)
+        ax1.plot(self.energyCalculator.time,self.energyCalculator.voltage,color="darkblue",label="Voltage")
+        ax2.plot(self.energyCalculator.time,self.energyCalculator.current,color="darkgreen",label="Current")
+        integrationTimeMin = self.energyCalculator.time[self.energyCalculator.integrationMin]
+        integrationTimeMax = self.energyCalculator.time[self.energyCalculator.integrationMax]
+        self.energyGraphTab.GraphWidget.canvas.addIntegrationBox(ax1,integrationTimeMin,integrationTimeMax)
 
         annotations = [
             ("Vmax","V max (V)",ax1),
@@ -426,6 +427,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         self.configReader.config["currentChannel"] = self.energyCurrentcomboBox.currentText()
         self.configReader.config["currentMinusChannel"] = self.energyCurrentcomboBoxMinus.currentText()
         self.configReader.config["energyFirstCell"] = self.energyFirstCellEdit.text()
+        self.configReader.config["energyIntegrationWindow"] = self.integrationWindowSpinBox.value()
         self.configReader.writeConfig()
 
 window = scopeCommander()

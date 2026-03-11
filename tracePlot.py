@@ -17,6 +17,14 @@ class tracePlotterCanvas(Canvas):
         Canvas.__init__(self, self.fig)
         Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         Canvas.updateGeometry(self)
+    def addIntegrationBox(self,ax,xstart,xstop):
+        miny,maxy = ax.get_ylim()
+        box = matplotlib.patches.Rectangle((xstart,miny)
+                                           ,xstop-xstart
+                                           ,maxy-miny
+                                           ,color="yellow"
+                                           ,alpha=0.2)
+        ax.add_patch(box)
 
 class tracePlotterWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
