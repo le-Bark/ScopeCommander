@@ -12,4 +12,4 @@ designer
 packager en executable
     pyinstaller --name scope-commander --onefile --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py
     ou
-    pyinstaller --name scope-commander --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py
+    pyinstaller --name scope-commander --noconsole --hidden-import="pyvisa_py" --hidden-import="pyvisa-sim" .\main.py

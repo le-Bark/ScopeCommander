@@ -85,7 +85,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         
         try:
             self.scope.getChannelLabels()
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
             return
 
@@ -164,7 +165,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         try:
             self.scope.setChannelLabel(ch,enabled,label)
             self.scope.getChannelLabels()
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
             return
         self.updateChannelTable()
@@ -172,12 +174,14 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
     def onCopy(self):
         self.topTabWidget.setCurrentIndex(0)
         self.GraphWidget.canvas.ax.cla()
+        self.GraphWidget.canvas.draw()
         try:
             self.scope.getChannelsBuffer()
         except ValueError as err:
             QMessageBox.critical(None, "Error", "-".join(err.args))
             return
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
             return
         self.data = self.scope.data
@@ -200,7 +204,8 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         except ValueError as err:
             QMessageBox.critical(None, "Error", "-".join(err.args))
             return
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
             return
         
@@ -301,17 +306,20 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
     def onStop(self):
         try:
             self.scope.stop()
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
     def onStart(self):
         try:
             self.scope.start()
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
     def onSingle(self):
         try:
             self.scope.single()
-        except:
+        except Exception as e:
+            print(e)
             self.unlinkScope()
 
     def updateEnergyGUI(self):
@@ -364,6 +372,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         ax2.cla()
 
         self.energyCalculator.integrateEdge()
+        self.energyCalculator.turnOff()
         self.energyResult = self.energyCalculator.result
         ax1.plot(self.energyCalculator.time,self.energyCalculator.voltage,color="darkblue",label="Voltage")
         ax2.plot(self.energyCalculator.time,self.energyCalculator.current,color="darkgreen",label="Current")
