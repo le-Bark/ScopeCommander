@@ -80,8 +80,8 @@ class tek_MDO3X(oscilloscope):
 
     def takeScreenshot(self):
         self.inst.clear()
-        if self.inst.query("FILESystem?").split(";")[0] == "\"\"":
-            print("No usb flash drive!")
+        freeSpace = float(self.inst.query("FILES:FREES?"))
+        if freeSpace == 0:
             raise ValueError('No flash drive!')
         self.inst.write("SAVE:IMAGe \"E:/temp.png\"")
         self.inst.query('*OPC?')

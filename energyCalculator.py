@@ -135,6 +135,80 @@ class energyCalculator():
             lastvi = vi
         return energy
     
+    def calculate(self):
+        if self.voltage[0] < self.voltage[-1]:
+            #turn off
+            self.turnOff()
+        else:
+            self.turnON()
+
+    def turnON(self):
+        index5P = math.ceil(len(self.time) * 0.05)
+        index95P = math.ceil(len(self.time) * 0.95)
+        dt = self.time[1] - self.time[0]
+
+        #Vhigh / low (V)
+        vHigh = energyDataPoint(index5P,mean(self.voltage[0:index5P]))
+        vLow = energyDataPoint(index95P,mean(self.voltage[index95P:-1]))
+        
+        #vMax (V)
+        vMax = energyDataPoint()
+        vMax.index, vMax.value = self.getMax(self.voltage)
+
+        #Overshoot (V)
+        vOver = energyDataPoint()
+        vOver.value = vMax.value - vHigh.value
+        vOver.index = vMax.index
+
+        #Rise / Fall time (ns)
+        vIndex10p, vIndex90p = self.get1090Index(self.voltage,vLow.value,vHigh.value,-1)
+        riseTime = energyDataPoint(int((vIndex10p + vIndex90p) / 2), self.time[vIndex10p] - self.time[vIndex90p])
+        riseTime.value = riseTime.value * 1e9
+
+        #max dV/dt (V / us)
+        maxdvdt = energyDataPoint()
+        maxdvdt.index, maxdvdt.value = self.maxdxdt(self.voltage[vIndex90p:vIndex10p],dt,10,-1)
+        maxdvdt.index += vIndex90p
+        maxdvdt.value = maxdvdt.value * 1e-6
+
+        #I high / low(A)
+        iHigh = energyDataPoint(index95P,mean(self.current[index95P:-1]))
+        iLow = energyDataPoint(index5P,mean(self.current[0:index5P]))
+        
+        #I max (A)
+        iMax = energyDataPoint()
+        iMax.index,iMax.value = self.getMax(self.current)
+
+        #dI/dt (V/us)
+        iIndex10p, iIndex90p = self.get1090Index(self.current,iLow.value,iMax.value,1)
+        maxdidt = energyDataPoint()
+        maxdidt.index, maxdidt.value = self.maxdxdt(self.current[iIndex10p:iMax.index],dt,10,1)
+        maxdidt.index += iIndex10p
+        maxdidt.value = maxdidt.value * 1e-6
+
+        #eOff (mj)
+        integrationMin = (vIndex90p+vIndex10p) / 2 - abs(vIndex90p-vIndex10p) * self.integrationWindow/2
+        integrationMax = (vIndex90p+vIndex10p) / 2 + abs(vIndex90p-vIndex10p) * self.integrationWindow/2
+        self.integrationMin = int(max(0,integrationMin))
+        self.integrationMax = int(min(integrationMax,len(self.voltage)-1))
+        energy = energyDataPoint()
+        energy.value = self.integrate() * 1e3        
+
+        self.result = {
+        "V max (V)" : vMax,
+        "V high (V)" : vHigh,
+        "Over / Undershoot (V)" : vOver,
+        "Rise / Falltime (ns)" : riseTime,
+        "dv / dt (V/us)" : maxdvdt,
+        "I max (A)" : iMax,
+        "dI /dt (A / us)" : maxdidt,
+        "Itop (A)" : iHigh,
+        "Energy (mJ)" : energy
+        }
+        for v in self.result.values():
+            v.voltage = self.voltage[v.index]
+            v.current = self.current[v.index]
+
     def turnOff(self):
         index5P = math.ceil(len(self.time) * 0.05)
         index95P = math.ceil(len(self.time) * 0.95)
@@ -161,6 +235,7 @@ class energyCalculator():
         #max dV/dt (V / us)
         maxdvdt = energyDataPoint()
         maxdvdt.index, maxdvdt.value = self.maxdxdt(self.voltage[vIndex10p:vMax.index],dt,10,1)
+        maxdvdt.index += vIndex10p
         maxdvdt.value = maxdvdt.value * 1e-6
 
         #I high / low(A)
@@ -175,6 +250,7 @@ class energyCalculator():
         iIndex10p, iIndex90p = self.get1090Index(self.current,iLow.value,iMax.value,-1)
         maxdidt = energyDataPoint()
         maxdidt.index, maxdidt.value = self.maxdxdt(self.current[iIndex90p:iIndex10p],dt,10,-1)
+        maxdidt.index += iIndex90p
         maxdidt.value = maxdidt.value * 1e-6
 
         #eOff (mj)
@@ -185,125 +261,18 @@ class energyCalculator():
         energy = energyDataPoint()
         energy.value = self.integrate() * 1e3        
 
-    def integrateEdge(self):
-        self.result = {}
-
-        index5Percent = math.ceil(len(self.time) * 0.05)
-        index95Percent = math.ceil(len(self.time) * 0.95)
-        dt = self.time[1] - self.time[0]
-
-        maxV = (0,0)
-        for i,v in enumerate(self.voltage):
-            lasti,lastv = maxV
-            if v > lastv:
-                maxV = (i,v)
-        minV = maxV
-        for i,v in enumerate(self.voltage):
-            lasti,lastv = minV
-            if v < lastv:
-                minV = (i,v)
-        self.result["V max (V)"] = maxV
-
-
-        t10p = 0
-        t90p = 0
-        v10p = 0
-        v90p = 0
-        lastv = 0
-        maxdvdt = (0,0)
-        if self.voltage[0] > self.voltage[-1]:
-            Vhigh = (index5Percent,mean(self.voltage[0:index5Percent]))
-            self.result["V high (V)"] = Vhigh
-            self.result["Over / Undershoot (V)"] = minV
-            for i,v in enumerate(self.voltage):
-                if t10p == 0:
-                    if v <= 0.1 * Vhigh[1]:
-                        t10p = i
-                        v10p = v
-
-                if t90p == 0:
-                    if v <= 0.9 * Vhigh[1]:
-                        t90p = i
-                        v90p = v
-                lastv = v
-            self.result["Rise / Falltime (ns)"] = (int((t90p + t10p)/2), (self.time[t10p] - self.time[t90p]) * 1e9)
-            maxdvdt = self.maxdxdt(self.voltage[t90p:t10p],dt,10,-1)
-            maxdvdt = (maxdvdt[0] + t10p, maxdvdt[1] * 1e-6)        
-        else:
-            Vhigh = (index95Percent,mean(self.voltage[index95Percent:]))
-            self.result["V high (V)"] = Vhigh
-            self.result["Over / Undershoot (V)"] = (maxV[0],maxV[1] - Vhigh[1])
-            for i,v in enumerate(self.voltage):
-                if t10p == 0:
-                    if v >= 0.1 * Vhigh[1]:
-                        t10p = i
-                        v10p = v
-                if t90p == 0:
-                    if v >= 0.9 * Vhigh[1]:
-                        t90p = i
-                        v90p = v
-                lastv = v
-            self.result["Rise / Falltime (ns)"] = (int((t90p + t10p)/2), (self.time[t90p] - self.time[t10p]) * 1e9 )
-            maxdvdt = self.maxdxdt(self.voltage[t10p:maxV[0]],dt,10,1)
-            maxdvdt = (maxdvdt[0] + t10p, maxdvdt[1] * 1e-6)
-
-        #maxdvdt = (maxdvdt[0],maxdvdt[1] / 1e6)
-        self.result["dv / dt (V/us)"] = maxdvdt
-
-        maxI = (0,0)
-        for i,I in enumerate(self.current):
-            lasti,lastI = maxI
-            if I > lastI:
-                maxI = (i,I)
-        self.result["I max (A)"] = maxI
+        self.result = {
+        "V max (V)" : vMax,
+        "V high (V)" : vHigh,
+        "Over / Undershoot (V)" : vOver,
+        "Rise / Falltime (ns)" : riseTime,
+        "dv / dt (V/us)" : maxdvdt,
+        "I max (A)" : iMax,
+        "dI /dt (A / us)" : maxdidt,
+        "Itop (A)" : iHigh,
+        "Energy (mJ)" : energy
+        }
+        for v in self.result.values():
+            v.voltage = self.voltage[v.index]
+            v.current = self.current[v.index]
         
-        lastI = 0
-        maxdidt = (0,0) 
-        #turn ON
-        if self.current[0] < self.current[-1]:
-            Itop = (index95Percent,mean(self.current[index95Percent:]))
-            index10pCurrent = 0
-            index90pCurrent = 0
-            for i, cur in enumerate(self.current):
-                if index10pCurrent == 0 and cur >= Itop[1]*0.05:
-                    index10pCurrent = i
-                elif index90pCurrent == 0 and cur >= Itop[1]*0.9:
-                    index90pCurrent = i
-                    break
-            maxdidt = self.maxdxdt(self.current[index10pCurrent:index90pCurrent],dt,10,1)
-            maxdidt = (maxdidt[0] + index10pCurrent, maxdidt[1] * 1e-6)
-            
-        #turn OFF
-        else:
-            Itop = (0,mean(self.current[0:index5Percent]))
-            index10pCurrent = 0
-            index90pCurrent = 0
-            for i, cur in enumerate(self.current):
-                if index90pCurrent == 0 and cur <= Itop[1]*0.9:
-                    index90pCurrent = i
-                elif index10pCurrent == 0 and cur <= Itop[1]*0.05:
-                    index10pCurrent = i
-                    break
-            maxdidt = self.maxdxdt(self.current[index90pCurrent:index10pCurrent],dt,10,-1)
-            maxdidt = (maxdidt[0] + index90pCurrent, maxdidt[1] * 1e-6)
-
-        self.result["dI /dt (A / us)"] = maxdidt
-        self.result["Itop (A)"] = Itop 
-        
-        #integrate
-        integrationMin = (t90p+t10p) / 2 - abs(t90p-t10p) * self.integrationWindow/2
-        integrationMax = (t90p+t10p) / 2 + abs(t90p-t10p) * self.integrationWindow/2
-        self.integrationMin = int(max(0,integrationMin))
-        self.integrationMax = int(min(integrationMax,len(self.voltage)-1))
-        
-        dt = self.time[1] - self.time[0]
-        lastvi = self.voltage[self.integrationMin] * self.current[self.integrationMin]
-        energy = 0
-        for v,i in zip(self.voltage[1 + self.integrationMin:self.integrationMax],self.current[1 + self.integrationMin:self.integrationMax]):
-            vi = v*i
-            #energy += abs((vi + lastvi) * dt / 2)
-            energy += (vi + lastvi) * dt / 2
-            lastvi = vi
-        self.result["Energy (mJ)"] = (0,energy * 1000)
-        
-

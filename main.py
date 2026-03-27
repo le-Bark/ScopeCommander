@@ -371,8 +371,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         ax1.cla()
         ax2.cla()
 
-        self.energyCalculator.integrateEdge()
-        self.energyCalculator.turnOff()
+        self.energyCalculator.calculate()
         self.energyResult = self.energyCalculator.result
         ax1.plot(self.energyCalculator.time,self.energyCalculator.voltage,color="darkblue",label="Voltage")
         ax2.plot(self.energyCalculator.time,self.energyCalculator.current,color="darkgreen",label="Current")
@@ -390,13 +389,13 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         ]
 
         for label, index, ax in annotations:
-            x,val = self.energyCalculator.result[index]
+            res = self.energyCalculator.result[index]
             if label == "dv/dt":
-                xy = (self.energyCalculator.time[x], self.energyCalculator.voltage[x])
+                xy = (self.energyCalculator.time[res.index], res.voltage)
             elif label == "dI/dt":
-                xy = (self.energyCalculator.time[x], self.energyCalculator.current[x])
+                xy = (self.energyCalculator.time[res.index], res.current)
             else:
-                xy = (self.energyCalculator.time[x],val)
+                xy = (self.energyCalculator.time[res.index],res.value)
             ax.annotate(label,xy=xy)
 
 
@@ -415,7 +414,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
         tab.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
         
         for i,k in enumerate(result.keys()): #to set label eventually
-            chItem = QTableWidgetItem("{:.3f}".format(result[k][1]))
+            chItem = QTableWidgetItem("{:.3f}".format(result[k].value))
             chItem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             tab.setItem(0, i, chItem)
 
@@ -429,7 +428,7 @@ class scopeCommander(QMainWindow, mainWindow.Ui_MainWindow):
             rng.Value = [[k for k in self.energyResult.keys()]]
 
         rng = self.excelCom.getNextFreeRange(firstCellAddress,dataWidth,1)
-        rng.Value = [[self.energyResult[k][1] for k in self.energyResult.keys()]]
+        rng.Value = [[self.energyResult[k].value for k in self.energyResult.keys()]]
 
     def onEnergyConfigChange(self,arg):
         self.configReader.config["voltageChannel"] = self.energyVoltageComboBox.currentText()
